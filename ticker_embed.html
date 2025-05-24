@@ -1,3 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectral Sanctum Ticker Embed</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a0000; /* Dark, unsettling background */
+            color: #ff3333; /* Creepy red text */
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .ticker-container {
+            width: 100%;
+            height: 50px; /* Adjust height as needed for your ticker */
+            overflow: hidden;
+            background-color: #1a0000;
+            border: 1px solid #4d0000;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ff3333;
+            padding: 10px 0;
+            box-sizing: border-box;
+            white-space: nowrap;
+            position: relative;
+            text-shadow: 0 0 5px #ff0000;
+        }
+
+        .ticker-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: none;
+        }
+
+        @keyframes scrollLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ticker-container">
+        <div class="ticker-content" id="spectralTicker">
+            Loading transmissions...
+        </div>
+    </div>
+
+    </body>
+</html>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const tickerElement = document.getElementById('spectralTicker');
