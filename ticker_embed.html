@@ -1,0 +1,114 @@
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const tickerElement = document.getElementById('spectralTicker');
+        let messages = [];
+        let currentMessageIndex = 0;
+        let animationDuration = 15;
+        const pauseDuration = 5000; // Your desired pause (e.g., 5 seconds)
+        const pixelsPerSecond = 80;
+
+        // --- DEFINE ALL YOUR MESSAGE FILE URLs FOR SPECTRAL SANCTUM HERE ---
+        // IMPORTANT: Replace with YOUR ACTUAL GitHub Pages URLs for this repository (ticker-for-spectralsanctum)!
+        const salesMessagesUrl = 'https://YOUR_USERNAME.github.io/ticker-for-spectralsanctum/messages_sales.json'; // Optional: include if you have sales for SS
+        const showsMessagesUrl = 'https://YOUR_USERNAME.github.io/ticker-for-spectralsanctum/messages_shows.json';
+        const specialsMessagesUrl = 'https://YOUR_USERNAME.github.io/ticker-for-spectralsanctum/messages_specials.json';
+        const notificationsMessagesUrl = 'https://YOUR_USERNAME.github.io/ticker-for-spectralsanctum/messages_notifications.json';
+        const defaultMessagesUrl = 'https://YOUR_USERNAME.github.io/ticker-for-spectralsanctum/messages_default.json'; // Fallback if no other messages found
+
+        // Function to shuffle an array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        async function fetchAllMessages() {
+            let urlsToFetch = [];
+            const today = new Date();
+            const month = today.getMonth() + 1; // getMonth() returns 0-11, so add 1 for 1-12
+            const day = today.getDate();
+
+            // 1. Optional Sales Period Check (Highest Priority if active)
+            // EXAMPLE: A sale from May 10th to May 20th (adjust month/day as needed)
+            const isSalesPeriod = (month === 5 && day >= 10 && day <= 20); // <--- ADJUST THIS DATE RANGE FOR SALES!
+            if (isSalesPeriod) {
+                urlsToFetch.push(salesMessagesUrl);
+            } else {
+                // 2. Main Spectral Sanctum Categories (fetch all of them if sales are not active)
+                urlsToFetch.push(showsMessagesUrl);
+                urlsToFetch.push(specialsMessagesUrl);
+                urlsToFetch.push(notificationsMessagesUrl);
+            }
+
+            // Fallback to default if no specific category URLs are being fetched or defined
+            if (urlsToFetch.length === 0) {
+                urlsToFetch.push(defaultMessagesUrl);
+            }
+
+            let combinedMessages = [];
+            const fetchPromises = urlsToFetch.map(url =>
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            console.warn(`Spectral Signal Lost: Could not fetch ${url} (Status: ${response.status}).`);
+                            return []; // Return empty array on error
+                        }
+                        return response.json();
+                    })
+                    .then(data => (Array.isArray(data) ? data : data.messages || [])) // Ensure data is an array
+                    .catch(error => {
+                        console.error(`Spectral Signal Disrupted: Error fetching ${url}:`, error);
+                        return []; // Return empty array on error
+                    })
+            );
+
+            // Wait for all fetches to complete and combine their messages
+            combinedMessages = (await Promise.all(fetchPromises)).flat();
+
+            // Shuffle the combined messages for a dynamic feel
+            messages = shuffleArray(combinedMessages);
+
+            if (messages.length > 0) {
+                startTicker();
+            } else {
+                tickerElement.textContent = "No transmissions active. Awaiting new signals from the void...";
+            }
+        }
+
+        function animateMessage() {
+            if (messages.length === 0) return;
+
+            const message = messages[currentMessageIndex];
+            tickerElement.textContent = message;
+
+            tickerElement.style.transform = 'translateX(100%)';
+            tickerElement.style.animation = 'none';
+
+            setTimeout(() => {
+                const containerWidth = tickerElement.parentElement.offsetWidth;
+                const contentWidth = tickerElement.scrollWidth;
+                const totalDistance = containerWidth + contentWidth;
+
+                animationDuration = totalDistance / pixelsPerSecond;
+
+                tickerElement.style.animation = `scrollLeft ${animationDuration}s linear forwards`;
+
+                tickerElement.onanimationend = () => {
+                    setTimeout(() => {
+                        currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+                        animateMessage();
+                    }, pauseDuration);
+                };
+            }, 50);
+        }
+
+        function startTicker() {
+            animateMessage();
+        }
+
+        // Initiate the fetching process
+        fetchAllMessages();
+    });
+</script>
