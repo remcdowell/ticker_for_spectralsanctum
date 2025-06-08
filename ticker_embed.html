@@ -32,7 +32,7 @@
         .ticker-content {
             display: inline-block;
             padding-left: 100%;
-            animation: none;
+            animation: none; /* Animation will be applied by JS */
         }
 
         @keyframes scrollLeft {
@@ -57,6 +57,8 @@
             let animationDuration = 15;
             const pauseDuration = 5000; // Your desired pause (e.g., 5 seconds)
             const pixelsPerSecond = 80;
+            let animationTimeout; // To store the timeout for the next message
+            let fetchIntervalId; // To store the interval ID for fetching messages
 
             // --- DEFINE ALL YOUR MESSAGE FILE URLs FOR SPECTRAL SANCTUM HERE ---
             // IMPORTANT: Replace with YOUR ACTUAL GitHub Pages URLs for this repository (e.g., ticker-for-spectralsanctum)!
@@ -75,6 +77,9 @@
             }
 
             async function fetchAllMessages() {
+                // Stop any ongoing animation before fetching new messages
+                stopTickerAnimation();
+
                 let urlsToFetch = [];
 
                 // Always include Shows, Specials, Notifications
@@ -89,7 +94,7 @@
 
                 let combinedMessages = [];
                 const fetchPromises = urlsToFetch.map(url =>
-                    fetch(url)
+                    fetch(url + '?_t=' + new Date().getTime()) // Add cache-busting parameter
                         .then(response => {
                             if (!response.ok) {
                                 console.warn(`Spectral Signal Lost: Could not fetch ${url} (Status: ${response.status}).`);
@@ -109,6 +114,7 @@
 
                 // Shuffle the combined messages for a dynamic feel
                 messages = shuffleArray(combinedMessages);
+                currentMessageIndex = 0; // Reset index to start from the beginning of new messages
 
                 if (messages.length > 0) {
                     startTicker();
@@ -117,41 +123,66 @@
                 }
             }
 
+            function stopTickerAnimation() {
+                // Clear any pending animation timeouts
+                clearTimeout(animationTimeout);
+                // Stop the current CSS animation
+                tickerElement.style.animation = 'none';
+                // Reset transform to ensure it doesn't jump weirdly when a new animation starts
+                tickerElement.style.transform = 'translateX(0)';
+            }
+
             function animateMessage() {
-                if (messages.length === 0) return;
+                if (messages.length === 0) {
+                    stopTickerAnimation(); // Ensure no animation is running if no messages
+                    return;
+                }
 
                 const message = messages[currentMessageIndex];
                 tickerElement.textContent = message;
 
-                tickerElement.style.transform = 'translateX(100%)';
+                // Reset animation properties before starting a new animation
                 tickerElement.style.animation = 'none';
+                tickerElement.style.transform = 'translateX(100%)';
 
-                setTimeout(() => {
-                    const containerWidth = tickerElement.parentElement.offsetWidth;
-                    const contentWidth = tickerElement.scrollWidth;
-                    const totalDistance = containerWidth + contentWidth;
+                // Force reflow/repaint to ensure CSS changes are applied before re-animating
+                void tickerElement.offsetWidth; 
 
-                    animationDuration = totalDistance / pixelsPerSecond;
+                const containerWidth = tickerElement.parentElement.offsetWidth;
+                const contentWidth = tickerElement.scrollWidth;
+                const totalDistance = containerWidth + contentWidth;
 
-                    tickerElement.style.animation = `scrollLeft ${animationDuration}s linear forwards`;
+                animationDuration = totalDistance / pixelsPerSecond;
 
-                    tickerElement.onanimationend = () => {
-                        setTimeout(() => {
-                            currentMessageIndex = (currentMessageIndex + 1) % messages.length;
-                            animateMessage();
-                        }, pauseDuration);
-                    };
-                }, 50);
+                tickerElement.style.animation = `scrollLeft ${animationDuration}s linear forwards`;
+
+                // Use 'onanimationend' for chaining animations. This will fire after one full scroll.
+                tickerElement.onanimationend = () => {
+                    animationTimeout = setTimeout(() => {
+                        currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+                        animateMessage();
+                    }, pauseDuration);
+                };
             }
 
             function startTicker() {
                 animateMessage();
             }
 
-            // Initiate the fetching process
+            // Initiate the fetching process immediately on load
             fetchAllMessages();
+
+            // Set the interval for fetching new messages (e.g., every 5 minutes = 300000 milliseconds)
+            // Adjust this interval based on how frequently you expect your JSON files to be updated.
+            const fetchInterval = 300000; // 5 minutes
+            fetchIntervalId = setInterval(fetchAllMessages, fetchInterval);
+
+            // Optional: Clear interval when the iframe is unloaded (though for Google Sites, it might just be reloaded)
+            window.addEventListener('beforeunload', () => {
+                clearInterval(fetchIntervalId);
+                clearTimeout(animationTimeout);
+            });
         });
     </script>
 
 </body>
-</html>
